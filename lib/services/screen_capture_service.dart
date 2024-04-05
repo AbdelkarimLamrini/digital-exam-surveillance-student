@@ -2,19 +2,18 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:student_application/platform_utils.dart';
 
-import 'services/notification_service.dart';
-import 'services/system_tray_service.dart';
+import '/shared/utils/platform_utils.dart';
+import 'notification_service.dart';
+import 'systray_service.dart';
 
-class ScreenRecorderWidget {
-  final BuildContext context;
+class ScreenCaptureService {
   String? outputStream;
   bool isRecording = false;
   bool manuallyStopped = false;
   Process? recordingProcess;
 
-  ScreenRecorderWidget(this.context);
+  ScreenCaptureService();
 
   void _setStatusBarColor() {
     SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
@@ -91,38 +90,38 @@ class ScreenRecorderWidget {
     }
   }
 
-  Future<void> attemptStartRecording() async {
-    if (isRecording) {
-      await toggleRecording();
-    } else {
-      try {
-        int displayCount = await getConnectedDisplays();
-        if (displayCount > 1) {
-          showDialog(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text("Multiple Displays Detected"),
-                content: const Text("Please disable all but the main display before starting. The exam won't be recorded if there are multiple displays enabled"),
-                actions: <Widget>[
-                  TextButton(
-                    child: const Text('OK'),
-                    onPressed: () {
-                      Navigator.of(context).pop();
-                    },
-                  ),
-                ],
-              );
-            },
-          );
-        } else {
-          await toggleRecording();
-        }
-      } catch (e) {
-        print('Error determining display count: $e');
-      }
-    }
-  }
+  // Future<void> attemptStartRecording() async {
+  //   if (isRecording) {
+  //     await toggleRecording();
+  //   } else {
+  //     try {
+  //       int displayCount = await getConnectedDisplays();
+  //       if (displayCount > 1) {
+  //         showDialog(
+  //           context: context,
+  //           builder: (BuildContext context) {
+  //             return AlertDialog(
+  //               title: const Text("Multiple Displays Detected"),
+  //               content: const Text("Please disable all but the main display before starting. The exam won't be recorded if there are multiple displays enabled"),
+  //               actions: <Widget>[
+  //                 TextButton(
+  //                   child: const Text('OK'),
+  //                   onPressed: () {
+  //                     Navigator.of(context).pop();
+  //                   },
+  //                 ),
+  //               ],
+  //             );
+  //           },
+  //         );
+  //       } else {
+  //         await toggleRecording();
+  //       }
+  //     } catch (e) {
+  //       print('Error determining display count: $e');
+  //     }
+  //   }
+  // }
 
   Future<void> attemptStopRecording() async {
     if (isRecording && recordingProcess != null) {

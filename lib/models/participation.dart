@@ -1,30 +1,5 @@
-class StudentParticipationForm {
-  final String studentId;
-  final String examId;
-  final String classRoomId;
-  final String fullName;
-  final String email;
 
-  StudentParticipationForm({
-    required this.studentId,
-    required this.examId,
-    required this.classRoomId,
-    required this.fullName,
-    required this.email,
-  });
-
-  Map<String, dynamic> toJson() {
-    return {
-      'studentId': studentId,
-      'examId': examId,
-      'classRoomId': classRoomId,
-      'fullName': fullName,
-      'email': email,
-    };
-  }
-}
-
-class StudentParticipation {
+class Participation {
   final int id;
   final String examId;
   final String classRoomId;
@@ -34,7 +9,7 @@ class StudentParticipation {
   final DateTime startTime;
   final String rtmpStreamUrl;
 
-  StudentParticipation({
+  Participation({
     required this.id,
     required this.examId,
     required this.classRoomId,
@@ -45,7 +20,7 @@ class StudentParticipation {
     required this.rtmpStreamUrl,
   });
 
-  factory StudentParticipation.fromJson(Map<String, dynamic> json) {
+  factory Participation.fromJson(Map<String, dynamic> json) {
     return switch (json) {
       {
         'id': int id,
@@ -57,7 +32,7 @@ class StudentParticipation {
         'startTime': String startTime,
         'rtmpStreamUrl': String rtmpStreamUrl,
       } =>
-        StudentParticipation(
+        Participation(
           id: id,
           examId: examId,
           classRoomId: classRoomId,
