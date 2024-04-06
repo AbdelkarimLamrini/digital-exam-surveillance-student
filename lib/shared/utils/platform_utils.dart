@@ -50,7 +50,7 @@ String getDisplay() {
   }
 }
 
-Future<int> getConnectedDisplays() async {
+int getConnectedDisplayCount() {
   String command;
   List<String> arguments;
 
@@ -75,7 +75,7 @@ Future<int> getConnectedDisplays() async {
     throw Exception('Unsupported platform');
   }
 
-  final result = await Process.run(command, arguments);
+  final result = Process.runSync(command, arguments);
   if (result.exitCode == 0) {
     print('Connected displays: ${result.stdout}');
     return int.tryParse(result.stdout) ?? 0;

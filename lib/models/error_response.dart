@@ -17,13 +17,13 @@ class ErrorResponse implements Exception {
         'status': int status,
         'error': String error,
         'message': String message,
-        'fieldErrors': Map<String, String> fieldErrors,
+        'fieldErrors': Map<String, dynamic> fieldErrors,
       } =>
         ErrorResponse(
           status: status,
           error: error,
           message: message,
-          fieldErrors: fieldErrors,
+          fieldErrors: fieldErrors.map((key, value) => MapEntry(key, value as String)),
         ),
       _ => throw Exception('Invalid ErrorResponse JSON'),
     };

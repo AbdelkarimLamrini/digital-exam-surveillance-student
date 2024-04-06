@@ -1,2 +1,2 @@
-const String backendApiUrl = 'http://localhost:8081';
-const String studentParticipationEndpoint = '/api/student-participations';
+const backendApiUrl = 'http://localhost:8081';
+const studentParticipationEndpoint = '/api/student-participations';

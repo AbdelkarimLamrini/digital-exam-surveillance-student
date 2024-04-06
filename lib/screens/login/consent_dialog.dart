@@ -9,7 +9,7 @@ class ConsentDialog extends StatelessWidget {
       title: const Text('Welcome to the Exam Tool'),
       content: const SingleChildScrollView(
         child: ListBody(
-          children: <Widget>[
+          children: [
             Text(
               '⚠️ Disclaimer',
               style: TextStyle(
@@ -28,7 +28,7 @@ class ConsentDialog extends StatelessWidget {
           ],
         ),
       ),
-      actions: <Widget>[
+      actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Next'),

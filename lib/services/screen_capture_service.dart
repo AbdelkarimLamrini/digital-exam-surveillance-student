@@ -1,163 +1,108 @@
 import 'dart:async';
 import 'dart:io';
-import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
+import '/shared/constants/ffmpeg_constants.dart';
 import '/shared/utils/platform_utils.dart';
 import 'notification_service.dart';
 import 'systray_service.dart';
 
 class ScreenCaptureService {
-  String? outputStream;
+  final String outputStream;
+  Process? recordingProcess;
   bool isRecording = false;
   bool manuallyStopped = false;
-  Process? recordingProcess;
 
-  ScreenCaptureService();
+  ScreenCaptureService(this.outputStream);
 
-  void _setStatusBarColor() {
-    SystemChrome.setSystemUIOverlayStyle(SystemUiOverlayStyle(
-      statusBarColor: isRecording ? Colors.green : Colors.red,
-    ));
-  }
+  Future<void> startRecording() async {
+    if (isRecording) return;
 
-  Future<void> toggleRecording() async {
-    isRecording = !isRecording;
-    _setStatusBarColor();
-    if (isRecording) {
-      String grabCommand = getGrabCommand();
-      String display = getDisplay();
-      assert (outputStream != null, 'Output stream is null');
-      const String command = 'ffmpeg';
-      final List<String> arguments = [
-        '-f',
-        grabCommand,
-        '-r',
-        '30',
-        '-i',
-        display,
-        '-c:v',
-        'libx264',
-        '-preset',
-        'ultrafast',
-        '-pix_fmt',
-        'yuv420p',
-        '-g',
-        '50',
-        '-b:v',
-        '4000k',
-        '-maxrate',
-        '4000k',
-        '-bufsize',
-        '8000k',
-        '-f',
-        'flv',
-        outputStream!,
-      ];
-      print('Running FFmpeg with arguments: $arguments');
+    try {
+      var displayCount = getConnectedDisplayCount();
+      if (displayCount > 1) {
+        throw Exception('Multiple displays detected');
+      }
+    } catch (e) {
+      print('Error determining display count: $e');
+    }
+
+    final (command, arguments) = getFFmpegCommand();
+    try {
       SystemTrayService.changeSystemTrayGreen();
-      try {
-        recordingProcess = await Process.start(command, arguments);
-        recordingProcess?.exitCode.then((int? exitCode) {
-          if (exitCode != 0) {
-            SystemTrayService.changeSystemTrayRed();
-            NotificationService.showNotification("Recording stopped due to connection error", "Please try again!");
-            
-            if (manuallyStopped == true) {
-              print(recordingProcess.toString());
-              attemptStopRecording();
-            } else {
-            print('FFmpeg exited with code $exitCode');
-            isRecording = !isRecording;
-            recordingProcess = null;
-            manuallyStopped = false;
-            _setStatusBarColor();
-            }
-          }
-        });
-      } catch (e) {
-        print('Error running FFmpeg: $e');
-        isRecording = !isRecording;
+      recordingProcess = await Process.start(command, arguments);
+      isRecording = true;
+      manuallyStopped = false;
+
+      recordingProcess?.exitCode.then((exitCode) {
+        if (exitCode == 0) return;
+        print('FFmpeg exited with code $exitCode');
+        SystemTrayService.changeSystemTrayRed();
+        NotificationService.showNotification(
+          "Recording Stopped",
+          "FFmpeg exited unexpectedly with code $exitCode!",
+        );
+        isRecording = false;
         recordingProcess = null;
         manuallyStopped = false;
-        _setStatusBarColor();
-      }
-    } else {
-      recordingProcess?.kill();
+      });
+    } catch (e) {
+      SystemTrayService.changeSystemTrayRed();
+      print('Error running FFmpeg: $e');
+      isRecording = false;
       recordingProcess = null;
       manuallyStopped = false;
-      _setStatusBarColor();
     }
   }
 
-  // Future<void> attemptStartRecording() async {
-  //   if (isRecording) {
-  //     await toggleRecording();
-  //   } else {
-  //     try {
-  //       int displayCount = await getConnectedDisplays();
-  //       if (displayCount > 1) {
-  //         showDialog(
-  //           context: context,
-  //           builder: (BuildContext context) {
-  //             return AlertDialog(
-  //               title: const Text("Multiple Displays Detected"),
-  //               content: const Text("Please disable all but the main display before starting. The exam won't be recorded if there are multiple displays enabled"),
-  //               actions: <Widget>[
-  //                 TextButton(
-  //                   child: const Text('OK'),
-  //                   onPressed: () {
-  //                     Navigator.of(context).pop();
-  //                   },
-  //                 ),
-  //               ],
-  //             );
-  //           },
-  //         );
-  //       } else {
-  //         await toggleRecording();
-  //       }
-  //     } catch (e) {
-  //       print('Error determining display count: $e');
-  //     }
-  //   }
-  // }
-
-  Future<void> attemptStopRecording() async {
-    if (isRecording && recordingProcess != null) {
-      try {
-        await recordingProcess!.kill();
-        isRecording = !isRecording;
-        manuallyStopped = true;
-        NotificationService.showNotification("Recording Stopped", "You manually stopped the recording!");
-      } catch (e) {
-        print('Error stopping recording: $e');
-      }
+  Future<void> stopRecording() async {
+    if (!isRecording) return;
+    try {
+      recordingProcess?.kill();
+      await recordingProcess?.exitCode;
       recordingProcess = null;
-      _setStatusBarColor();
-    } else {
-      print('Recording process is null or not recording.');
+      manuallyStopped = true;
+      isRecording = false;
+
+      SystemTrayService.changeSystemTrayRed();
+      NotificationService.showNotification(
+        "Recording Stopped",
+        "You manually stopped the recording!",
+      );
+    } catch (e) {
+      print('Error stopping FFmpeg: $e');
     }
   }
 
-  void reconnectRecording() {
-    int teller = 3;
-    print('Reconnecting...');
-    recordingProcess?.kill(ProcessSignal.sigint);
-    recordingProcess = null;
-    
-    Timer(Duration(seconds: 5), () {
-      if (recordingProcess?.exitCode != -1) {
-        toggleRecording();
-        isRecording = true;
-        NotificationService.showNotification("Automatic Reconnection", "Continue your exam!");
-      } else if (teller > 0) {
-        reconnectRecording();
-        teller = teller -1;
-        print(teller);
-      } else {
-        NotificationService.showNotification("Automatic Reconnection Failed", "Notify your supervisor!");
-      }
-    });
+  (String, List<String>) getFFmpegCommand() {
+    String grabCommand = getGrabCommand();
+    String display = getDisplay();
+    const String command = 'ffmpeg';
+    final List<String> arguments = [
+      '-f',
+      grabCommand,
+      '-r',
+      frameRate,
+      '-i',
+      display,
+      '-c:v',
+      'libx264',
+      '-preset',
+      'ultrafast',
+      '-pix_fmt',
+      'yuv420p',
+      '-g',
+      gop,
+      '-b:v',
+      bitRate,
+      '-maxrate',
+      maxRate,
+      '-bufsize',
+      bufferSize,
+      '-f',
+      'flv',
+      outputStream,
+    ];
+    print('Running FFmpeg with arguments: $arguments');
+    return (command, arguments);
   }
 }

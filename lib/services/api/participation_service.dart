@@ -8,7 +8,7 @@ import '/models/error_response.dart';
 import '/models/participation_form.dart';
 import '/shared/constants/api_constants.dart';
 
-Future<Participation> startExam(ParticipationForm formData) async {
+Future<Participation> startParticipation(ParticipationForm formData) async {
   const url = backendApiUrl + studentParticipationEndpoint;
   final response = await http.post(
     Uri.parse(url),
@@ -29,7 +29,7 @@ Future<Participation> startExam(ParticipationForm formData) async {
   }
 }
 
-Future<String> endExam(Participation participation) async {
+Future<String> endParticipation(Participation participation) async {
   var url = '$backendApiUrl$studentParticipationEndpoint/${participation.id}';
   final response = await http.delete(
     Uri.parse(url),
