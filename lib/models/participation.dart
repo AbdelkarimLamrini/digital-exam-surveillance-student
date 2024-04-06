@@ -1,4 +1,3 @@
-
 class Participation {
   final int id;
   final String examId;

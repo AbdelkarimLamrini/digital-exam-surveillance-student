@@ -88,8 +88,8 @@ bool illegalAppsRunning() {
   String shell = Platform.isMacOS
       ? 'zsh'
       : Platform.isWindows
-      ? 'PowerShell'
-      : 'bash';
+          ? 'PowerShell'
+          : 'bash';
   String command;
   if (Platform.isMacOS || Platform.isLinux) {
     command = "ps aux | grep '[D]iscord'";

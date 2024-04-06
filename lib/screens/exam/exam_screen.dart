@@ -33,14 +33,14 @@ class _ExamScreenState extends State<ExamScreen> {
 
   @override
   void dispose() {
-    if (captureService.isRecording) {
+    if (captureService.isRecording.value) {
       captureService.stopRecording();
     }
     super.dispose();
   }
 
   void toggleRecording() async {
-    if (captureService.isRecording) {
+    if (captureService.isRecording.value) {
       await captureService.stopRecording();
       setState(() {});
       return;
@@ -57,7 +57,7 @@ class _ExamScreenState extends State<ExamScreen> {
   }
 
   void endExam() {
-    if (captureService.isRecording) {
+    if (captureService.isRecording.value) {
       captureService.stopRecording();
     }
     endParticipation(participation);
@@ -83,14 +83,17 @@ class _ExamScreenState extends State<ExamScreen> {
             Text(participation.fullName),
             Text(participation.email),
             SizedBox(height: 30),
-            FilledButton.icon(
-              onPressed: toggleRecording,
-              icon: Icon(captureService.isRecording
-                  ? Icons.stop_circle_outlined
-                  : Icons.play_circle_outlined),
-              label: Text(captureService.isRecording
-                  ? 'Stop Recording'
-                  : 'Start Recording'),
+            ValueListenableBuilder(
+              valueListenable: captureService.isRecording,
+              builder: (context, value, _) {
+                return FilledButton.icon(
+                  onPressed: toggleRecording,
+                  icon: Icon(value
+                      ? Icons.stop_circle_outlined
+                      : Icons.play_circle_outlined),
+                  label: Text(value ? 'Stop Recording' : 'Start Recording'),
+                );
+              },
             ),
             SizedBox(height: 10),
             OutlinedButton.icon(

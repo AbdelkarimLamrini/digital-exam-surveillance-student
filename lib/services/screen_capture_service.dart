@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
+
 import '/shared/constants/ffmpeg_constants.dart';
 import '/shared/utils/platform_utils.dart';
 import 'notification_service.dart';
@@ -9,13 +11,13 @@ import 'systray_service.dart';
 class ScreenCaptureService {
   final String outputStream;
   Process? recordingProcess;
-  bool isRecording = false;
+  final isRecording = ValueNotifier(false);
   bool manuallyStopped = false;
 
   ScreenCaptureService(this.outputStream);
 
   Future<void> startRecording() async {
-    if (isRecording) return;
+    if (isRecording.value) return;
 
     try {
       var displayCount = getConnectedDisplayCount();
@@ -28,49 +30,57 @@ class ScreenCaptureService {
 
     final (command, arguments) = getFFmpegCommand();
     try {
-      SystemTrayService.changeSystemTrayGreen();
+      SystemTrayService.setSystemTrayGreen();
       recordingProcess = await Process.start(command, arguments);
-      isRecording = true;
+      isRecording.value = true;
       manuallyStopped = false;
 
       recordingProcess?.exitCode.then((exitCode) {
         if (exitCode == 0) return;
-        print('FFmpeg exited with code $exitCode');
-        SystemTrayService.changeSystemTrayRed();
-        NotificationService.showNotification(
-          "Recording Stopped",
-          "FFmpeg exited unexpectedly with code $exitCode!",
-        );
-        isRecording = false;
+        if (manuallyStopped) return;
+        notifyRecordingStoppedUnexpectedly(exitCode);
+        isRecording.value = false;
         recordingProcess = null;
         manuallyStopped = false;
       });
     } catch (e) {
-      SystemTrayService.changeSystemTrayRed();
+      SystemTrayService.setSystemTrayRed();
       print('Error running FFmpeg: $e');
-      isRecording = false;
+      isRecording.value = false;
       recordingProcess = null;
       manuallyStopped = false;
     }
   }
 
   Future<void> stopRecording() async {
-    if (!isRecording) return;
+    if (!isRecording.value) return;
     try {
-      recordingProcess?.kill();
-      await recordingProcess?.exitCode;
-      recordingProcess = null;
       manuallyStopped = true;
-      isRecording = false;
-
-      SystemTrayService.changeSystemTrayRed();
-      NotificationService.showNotification(
-        "Recording Stopped",
-        "You manually stopped the recording!",
-      );
+      recordingProcess?.kill();
+      recordingProcess = null;
+      isRecording.value = false;
+      notifyRecordingStoppedManually();
     } catch (e) {
       print('Error stopping FFmpeg: $e');
     }
+  }
+
+  void notifyRecordingStoppedManually() {
+    print('FFmpeg process was stopped manually!');
+    SystemTrayService.setSystemTrayRed();
+    NotificationService.showNotification(
+      "Recording Stopped",
+      "You stopped recording!",
+    );
+  }
+
+  void notifyRecordingStoppedUnexpectedly(int exitCode) {
+    print('FFmpeg exited unexpectedly with code $exitCode!');
+    SystemTrayService.setSystemTrayRed();
+    NotificationService.showNotification(
+      "Recording Stopped",
+      "FFmpeg exited unexpectedly with code $exitCode!",
+    );
   }
 
   (String, List<String>) getFFmpegCommand() {
