@@ -36,6 +36,7 @@ class _ExamScreenState extends State<ExamScreen> {
     if (captureService.isRecording.value) {
       captureService.stopRecording();
     }
+    endParticipation(participation);
     super.dispose();
   }
 
@@ -56,11 +57,12 @@ class _ExamScreenState extends State<ExamScreen> {
     }
   }
 
-  void endExam() {
+  void endExam() async {
     if (captureService.isRecording.value) {
-      captureService.stopRecording();
+      await captureService.stopRecording();
     }
-    endParticipation(participation);
+    await endParticipation(participation);
+    if (!mounted) return;
     Navigator.of(context).pop();
   }
 
