@@ -1,8 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/material.dart';
-import 'package:student_application/presentation/widgets/quit_running_app_dialog_widget.dart';
-
 String getGrabCommand() {
   if (Platform.isLinux) {
     return 'x11grab';
@@ -53,7 +50,7 @@ String getDisplay() {
   }
 }
 
-Future<int> getConnectedDisplays() async {
+int getConnectedDisplayCount() {
   String command;
   List<String> arguments;
 
@@ -66,16 +63,19 @@ Future<int> getConnectedDisplays() async {
       '-NoProfile',
       '-Command',
       'Add-Type -AssemblyName System.Windows.Forms; '
-      '[System.Windows.Forms.Screen]::AllScreens.Count.ToString()'
+          '[System.Windows.Forms.Screen]::AllScreens.Count.ToString()'
     ];
   } else if (Platform.isMacOS) {
     command = 'zsh';
-    arguments = ['-c', 'system_profiler SPDisplaysDataType | grep "Resolution:" | wc -l'];
+    arguments = [
+      '-c',
+      'system_profiler SPDisplaysDataType | grep "Resolution:" | wc -l'
+    ];
   } else {
     throw Exception('Unsupported platform');
   }
 
-  final result = await Process.run(command, arguments);
+  final result = Process.runSync(command, arguments);
   if (result.exitCode == 0) {
     print('Connected displays: ${result.stdout}');
     return int.tryParse(result.stdout) ?? 0;
@@ -84,8 +84,12 @@ Future<int> getConnectedDisplays() async {
   }
 }
 
-Future<void> checkRunningApplications(BuildContext context) async {
-  String shell = Platform.isMacOS ? 'zsh' : Platform.isWindows ? 'PowerShell' : 'bash';
+bool illegalAppsRunning() {
+  String shell = Platform.isMacOS
+      ? 'zsh'
+      : Platform.isWindows
+          ? 'PowerShell'
+          : 'bash';
   String command;
   if (Platform.isMacOS || Platform.isLinux) {
     command = "ps aux | grep '[D]iscord'";
@@ -93,24 +97,15 @@ Future<void> checkRunningApplications(BuildContext context) async {
     command = 'tasklist | findstr /i "Discord"';
   } else {
     print('Unsupported platform');
-    return;
+    return false;
   }
 
   try {
-    ProcessResult result = await Process.run(shell, ['-c',command]);
-  
-    bool isRunning = result.stdout.toString().trim().isNotEmpty && result.stdout.toString().contains('Discord');
-
-    if (isRunning) {
-      print('Discord is running');
-      showQuitAppsDialog(context, () {
-       
-        Navigator.of(context).pop();
-      });
-    } else {
-      print('Discord is not running');
-    }
+    var result = Process.runSync(shell, ['-c', command]);
+    var isRunning = result.stdout.toString().trim().contains('Discord');
+    return isRunning;
   } catch (e) {
     print('Failed to run command: $e');
+    return false;
   }
 }
